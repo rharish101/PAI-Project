@@ -38,6 +38,9 @@ class Model:
         self.rng = np.random.default_rng(seed=0)
 
         # TODO: Add custom initialization for your model here if necessary
+        self.model = GaussianProcessRegressor(
+            random_state=self.rng.integers(0, 100)
+        )
 
     def predict(self, x: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -51,6 +54,7 @@ class Model:
         # TODO: Use your GP to estimate the posterior mean and stddev for each location here
         gp_mean = np.zeros(x.shape[0], dtype=float)
         gp_std = np.zeros(x.shape[0], dtype=float)
+        gp_mean, gp_std = self.model.predict(x, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
         predictions = gp_mean
@@ -65,7 +69,7 @@ class Model:
         """
 
         # TODO: Fit your model here
-        pass
+        self.model.fit(train_x, train_y)
 
 
 def cost_function(y_true: np.ndarray, y_predicted: np.ndarray) -> float:
