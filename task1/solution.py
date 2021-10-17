@@ -48,7 +48,8 @@ class Model:
             kernel=DotProduct() + ConstantKernel() * Matern(),
             random_state=self.rng.integers(0, 100),
         )
-        self.scaler = StandardScaler()
+        self.scaler_x = StandardScaler()
+        self.scaler_y = StandardScaler(with_std=False)
 
     def predict(self, x: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -60,8 +61,9 @@ class Model:
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each location here
-        x = self.scaler.transform(x)
+        x = self.scaler_x.transform(x)
         gp_mean, gp_std = self.model.predict(x, return_std=True)
+        gp_mean = self.scaler_y.inverse_transform(gp_mean[:, np.newaxis])[:, 0]
 
         # TODO: Use the GP posterior to form your predictions here
 
@@ -98,7 +100,9 @@ class Model:
         """
 
         # TODO: Fit your model here
-        train_x = self.scaler.fit_transform(train_x)
+        train_x = self.scaler_x.fit_transform(train_x)
+        train_y = self.scaler_y.fit_transform(train_y[:, np.newaxis])[:, 0]
+
         indices = self.rng.choice(range(len(train_y)), size=self.TRAIN_SIZE)
         X = train_x[indices]
         y = train_y[indices]
