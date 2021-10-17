@@ -30,6 +30,9 @@ class Model:
     without changing their signatures, but are allowed to create additional methods.
     """
 
+    # Number of points to randomly sample for training
+    TRAIN_SIZE = 2000
+
     def __init__(self) -> None:
         """
         Initialize your model here.
@@ -69,7 +72,10 @@ class Model:
         """
 
         # TODO: Fit your model here
-        self.model.fit(train_x, train_y)
+        indices = self.rng.choice(range(len(train_y)), size=self.TRAIN_SIZE)
+        X = train_x[indices]
+        y = train_y[indices]
+        self.model.fit(X, y)
 
 
 def cost_function(y_true: np.ndarray, y_predicted: np.ndarray) -> float:
