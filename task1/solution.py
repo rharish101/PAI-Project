@@ -42,7 +42,8 @@ class Model:
 
         # TODO: Add custom initialization for your model here if necessary
         self.model = GaussianProcessRegressor(
-            random_state=self.rng.integers(0, 100)
+            kernel=DotProduct() + ConstantKernel() * Matern(),
+            random_state=self.rng.integers(0, 100),
         )
 
     def predict(self, x: np.ndarray) -> typing.Tuple[np.ndarray, np.ndarray, np.ndarray]:
