@@ -4,8 +4,6 @@ import typing
 from sklearn.gaussian_process.kernels import *
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
 from matplotlib import cm
 
@@ -60,8 +58,6 @@ class Model:
         """
 
         # TODO: Use your GP to estimate the posterior mean and stddev for each location here
-        gp_mean = np.zeros(x.shape[0], dtype=float)
-        gp_std = np.zeros(x.shape[0], dtype=float)
         gp_mean, gp_std = self.model.predict(x, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
