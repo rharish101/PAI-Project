@@ -30,7 +30,7 @@ class Model:
     """
 
     # Number of points to randomly sample for training
-    TRAIN_SIZE = 2000
+    TRAIN_SIZE = 3000
 
     # Constants for the GP posterior-based loss-weighted prediction
     PRED_SAMPLES = 100  # For drawing samples from the posterior
