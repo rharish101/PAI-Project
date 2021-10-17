@@ -23,14 +23,14 @@ COST_W_OVERPREDICT = 5.0
 COST_W_THRESHOLD = 20.0
 
 
-class Model(object):
+class Model:
     """
     Model for this task.
     You need to implement the fit_model and predict methods
     without changing their signatures, but are allowed to create additional methods.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize your model here.
         We already provide a random number generator for reproducibility.
@@ -57,7 +57,7 @@ class Model(object):
 
         return predictions, gp_mean, gp_std
 
-    def fit_model(self, train_x: np.ndarray, train_y: np.ndarray):
+    def fit_model(self, train_x: np.ndarray, train_y: np.ndarray) -> None:
         """
         Fit your model on the given training data.
         :param train_x: Training features as a 2d NumPy float array of shape (NUM_SAMPLES, 2)
