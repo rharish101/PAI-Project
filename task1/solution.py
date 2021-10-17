@@ -33,6 +33,10 @@ class Model:
     # Number of points to randomly sample for training
     TRAIN_SIZE = 2000
 
+    # Constants for the GP posterior-based loss-weighted prediction
+    PRED_SAMPLES = 100  # For drawing samples from the posterior
+    PRED_INTERVAL = 10  # Interval for possible candidates from the posterior
+
     def __init__(self) -> None:
         """
         Initialize your model here.
@@ -61,7 +65,29 @@ class Model:
         gp_mean, gp_std = self.model.predict(x, return_std=True)
 
         # TODO: Use the GP posterior to form your predictions here
-        predictions = gp_mean
+
+        # Draw samples from the GP's estimation of the true labels
+        sample = self.rng.normal(size=(len(x), self.PRED_SAMPLES))
+        possible_true = sample * gp_std[:, np.newaxis] + gp_mean[:, np.newaxis]
+
+        # Get possible candidates for the prediction
+        possible_pred = np.linspace(
+            gp_mean - gp_std, gp_mean + gp_std, num=self.PRED_INTERVAL
+        ).T
+
+        # Monte-Carlo approximation of the expected cost per candidate
+        all_costs = cost_function(
+            # Use broadcasting to avoid for-loops
+            np.expand_dims(possible_true, 1),
+            np.expand_dims(possible_pred, 2),
+            mean=False,
+        ).mean(2)
+
+        # Choose the candidate (per data point) with the lowest exptected cost
+        best_idxs = all_costs.argmin(1)
+        predictions = np.array(
+            [possible_pred[i, best_idxs[i]] for i in range(len(x))]
+        )
 
         return predictions, gp_mean, gp_std
 
@@ -79,7 +105,7 @@ class Model:
         self.model.fit(X, y)
 
 
-def cost_function(y_true: np.ndarray, y_predicted: np.ndarray) -> float:
+def cost_function(y_true: np.ndarray, y_predicted: np.ndarray, mean: bool = True) -> np.ndarray:
     """
     Calculates the cost of a set of predictions.
 
@@ -87,7 +113,7 @@ def cost_function(y_true: np.ndarray, y_predicted: np.ndarray) -> float:
     :param y_predicted: Predicted pollution levels as a 1d NumPy float array
     :return: Total cost of all predictions as a single float
     """
-    assert y_true.ndim == 1 and y_predicted.ndim == 1 and y_true.shape == y_predicted.shape
+    # assert y_true.ndim == 1 and y_predicted.ndim == 1 and y_true.shape == y_predicted.shape
 
     # Unweighted cost
     cost = (y_true - y_predicted) ** 2
@@ -106,7 +132,10 @@ def cost_function(y_true: np.ndarray, y_predicted: np.ndarray) -> float:
     weights[mask_3] = COST_W_NORMAL
 
     # Weigh the cost and return the average
-    return np.mean(cost * weights)
+    weighted_cost = cost * weights
+    if mean:
+        weighted_cost = weighted_cost.mean()
+    return weighted_cost
 
 
 def perform_extended_evaluation(model: Model, output_dir: str = '/results'):
