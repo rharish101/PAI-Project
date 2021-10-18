@@ -33,7 +33,7 @@ class Model:
     TRAIN_SIZE = 3000
 
     # Constants for the GP posterior-based loss-weighted prediction
-    PRED_SAMPLES = 100  # For drawing samples from the posterior
+    PRED_SAMPLES = 1000  # For drawing samples from the posterior
     PRED_INTERVAL = 10  # Interval for possible candidates from the posterior
 
     def __init__(self) -> None:
