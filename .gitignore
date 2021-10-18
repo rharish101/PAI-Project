@@ -6,3 +6,5 @@ __pycache__/
 task1/*.csv
 task1/*.byte
 task1/extended_evaluation.pdf
+.DS_Store
+.idea/
