@@ -1,6 +1,5 @@
 import os
 import typing
-import random
 
 from sklearn.gaussian_process.kernels import *
 import numpy as np
@@ -22,7 +21,6 @@ COST_W_NORMAL = 1.0
 COST_W_OVERPREDICT = 5.0
 COST_W_THRESHOLD = 20.0
 
-random.seed(0)
 
 class Model:
     """
@@ -122,7 +120,7 @@ class Model:
             sample_indices = []
             if intra_cluster_sampling == 'uniform':
                 for i in range(n_clusters):
-                    cluster_sample_index = random.choice(np.argwhere(cluster_labels == i))
+                    cluster_sample_index = self.rng.choice(np.argwhere(cluster_labels == i))
                     sample_indices.append(int(cluster_sample_index))
             elif intra_cluster_sampling == 'medoid':
                 centroids = []
@@ -151,7 +149,7 @@ class Model:
         train_y = self.scaler_y.fit_transform(train_y[:, np.newaxis])[:, 0]
 
         X, y = self.get_train_data(train_x, train_y, sampling_method='clustering', clustering_method='kmeans'
-                                   , intra_cluster_sampling="medoid")
+                                   , intra_cluster_sampling="uniform")
         self.model.fit(X, y)
 
 
