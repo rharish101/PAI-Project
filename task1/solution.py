@@ -5,15 +5,15 @@ from sklearn.gaussian_process.kernels import *
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, DBSCAN
+from sklearn.metrics import pairwise_distances_argmin_min
 import matplotlib.pyplot as plt
 from matplotlib import cm
-
 
 # Set `EXTENDED_EVALUATION` to `True` in order to visualize your predictions.
 EXTENDED_EVALUATION = True
 EVALUATION_GRID_POINTS = 300  # Number of grid points used in extended evaluation
 EVALUATION_GRID_POINTS_3D = 50  # Number of points displayed in 3D during evaluation
-
 
 # Cost function constants
 THRESHOLD = 35.5
@@ -90,6 +90,54 @@ class Model:
 
         return predictions, gp_mean, gp_std
 
+    def get_train_data(self, train_x, train_y, sampling_method='uniform', clustering_method='kmeans',
+                       intra_cluster_sampling='uniform') -> typing.Tuple[np.ndarray, np.ndarray]:
+        """
+        Sample train data by the given sampling method.
+        :param train_x: Training features as a 2d NumPy float array of shape (NUM_SAMPLES, 2)
+        :param train_y: Training pollution concentrations as a 1d NumPy float array of shape (NUM_SAMPLES,)
+        :param sampling_method: Sampling method, among ('uniform', 'clustering'). It is set to 'uniform' by default.
+        :param clustering_method: The method used for clustering. Possible values: ('kmeans', 'dbscan').
+        :param intra_cluster_sampling: How to sample a point in cluster. Possible values: ('uniform', 'medoid').
+        """
+        if sampling_method == 'uniform':
+            indices = self.rng.choice(range(len(train_y)), size=self.TRAIN_SIZE)
+            return train_x[indices], train_y[indices]
+        elif sampling_method == 'clustering':
+            clustering_X = np.column_stack([train_x, train_y])
+
+            if clustering_method == 'kmeans':
+                clustering_model = KMeans(n_clusters=self.TRAIN_SIZE, random_state=0)
+            elif clustering_method == 'dbscan':
+                clustering_model = DBSCAN(eps=0.12, min_samples=1)
+            else:
+                raise Exception("'{}' is not among supported clustering methods.".format(clustering_method))
+
+            cluster_labels = clustering_model.fit_predict(clustering_X)
+            n_clusters = len(set(cluster_labels)) - (1 if -1 in cluster_labels else 0)
+            print(f"{clustering_method} has been fit on the data and found {n_clusters} clusters.")
+
+            sample_indices = []
+            if intra_cluster_sampling == 'uniform':
+                for i in range(n_clusters):
+                    cluster_sample_index = self.rng.choice(np.argwhere(cluster_labels == i))
+                    sample_indices.append(int(cluster_sample_index))
+            elif intra_cluster_sampling == 'medoid':
+                centroids = []
+                for i in range(n_clusters):
+                    cluster_indices = [int(ind) for ind in np.argwhere(cluster_labels == i)]
+                    centroid = np.mean(clustering_X[cluster_indices], axis=0)
+                    centroids.append(centroid)
+                centroids = np.array(centroids)
+                closest, _ = pairwise_distances_argmin_min(centroids, clustering_X)
+                sample_indices = closest
+            else:
+                print(f"{intra_cluster_sampling} is not among supported intra-cluster sampling methods.")
+
+            return train_x[sample_indices], train_y[sample_indices]
+        else:
+            raise Exception("'{}' is not among supported sampling methods.".format(sampling_method))
+
     def fit_model(self, train_x: np.ndarray, train_y: np.ndarray) -> None:
         """
         Fit your model on the given training data.
@@ -100,9 +148,8 @@ class Model:
         # TODO: Fit your model here
         train_y = self.scaler_y.fit_transform(train_y[:, np.newaxis])[:, 0]
 
-        indices = self.rng.choice(range(len(train_y)), size=self.TRAIN_SIZE)
-        X = train_x[indices]
-        y = train_y[indices]
+        X, y = self.get_train_data(train_x, train_y, sampling_method='clustering', clustering_method='kmeans'
+                                   , intra_cluster_sampling="uniform")
         self.model.fit(X, y)
 
 
