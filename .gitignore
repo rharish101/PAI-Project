@@ -1,10 +1,16 @@
+# Common system artifacts
+.DS_Store
+.idea/
+
+# Dataset stuff
+*.csv
+*.byte
+*.bytes
+*.npz
+
 # Python stuff
 __pycache__/
 .mypy_cache/
 
 # For task 1
-task1/*.csv
-task1/*.byte
 task1/extended_evaluation.pdf
-.DS_Store
-.idea/
