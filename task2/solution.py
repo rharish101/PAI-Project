@@ -308,12 +308,13 @@ class UnivariateGaussian(ParameterDistribution):
         self.sigma = sigma
 
     def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
-        # TODO: Implement this
-        return 0.0
+        ll = -0.5 * np.log(2 * np.pi)
+        ll -= torch.log(self.sigma)
+        ll -= 0.5 * ((values - self.mu) / self.sigma) ** 2
+        return ll
 
     def sample(self) -> torch.Tensor:
-        # TODO: Implement this
-        raise NotImplementedError()
+        return torch.randn(()) * self.sigma + self.mu
 
 
 class MultivariateDiagonalGaussian(ParameterDistribution):
@@ -332,12 +333,16 @@ class MultivariateDiagonalGaussian(ParameterDistribution):
         self.rho = rho
 
     def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
-        # TODO: Implement this
-        return 0.0
+        var = F.softplus(self.rho.flatten()) ** 2
+        ll = -(len(var) / 2) * np.log(2 * np.pi)
+        ll -= 0.5 * var.prod().log()
+        diff = (values - self.mu).flatten()
+        ll -= 0.5 * diff.T @ ((1 / var) * diff)
+        return ll
 
     def sample(self) -> torch.Tensor:
-        # TODO: Implement this
-        raise NotImplementedError()
+        sigma = F.softplus(self.rho)
+        return torch.randn(*self.mu.shape) * sigma + self.mu
 
 
 def evaluate(model: Model, eval_loader: torch.utils.data.DataLoader, data_dir: str, output_dir: str):
