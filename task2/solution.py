@@ -187,7 +187,7 @@ class BayesianLayer(nn.Module):
         assert isinstance(self.prior, ParameterDistribution)
         # assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
 
-        # TODO: Create a suitable variational posterior for weights as an instance of ParameterDistribution.
+        # Create a suitable variational posterior for weights as an instance of ParameterDistribution.
         #  You need to create separate ParameterDistribution instances for weights and biases,
         #  but can use the same family of distributions if you want.
         #  IMPORTANT: You need to create a nn.Parameter(...) for each parameter
@@ -197,15 +197,21 @@ class BayesianLayer(nn.Module):
         #      torch.nn.Parameter(torch.zeros((out_features, in_features))),
         #      torch.nn.Parameter(torch.ones((out_features, in_features)))
         #  )
-        self.weights_var_posterior = None
+        self.weights_var_posterior = MultivariateDiagonalGaussian(
+            nn.Parameter(torch.zeros((out_features, in_features))),
+            nn.Parameter(prior_std * torch.ones((out_features, in_features))),
+        )
 
         assert isinstance(self.weights_var_posterior, ParameterDistribution)
         assert any(True for _ in self.weights_var_posterior.parameters()), 'Weight posterior must have parameters'
 
         if self.use_bias:
-            # TODO: As for the weights, create the bias variational posterior instance here.
+            # As for the weights, create the bias variational posterior instance here.
             #  Make sure to follow the same rules as for the weight variational posterior.
-            self.bias_var_posterior = None
+            self.bias_var_posterior: typing.Optional[ParameterDistribution] = MultivariateDiagonalGaussian(
+                nn.Parameter(torch.zeros(out_features)),
+                nn.Parameter(prior_std * torch.ones(out_features)),
+            )
             assert isinstance(self.bias_var_posterior, ParameterDistribution)
             assert any(True for _ in self.bias_var_posterior.parameters()), 'Bias posterior must have parameters'
         else:
