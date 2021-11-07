@@ -314,7 +314,7 @@ class UnivariateGaussian(ParameterDistribution):
         return ll
 
     def sample(self) -> torch.Tensor:
-        return torch.randn(()) * self.sigma + self.mu
+        return torch.randn((), device=self.mu.device) * self.sigma + self.mu
 
 
 class MultivariateDiagonalGaussian(ParameterDistribution):
@@ -342,7 +342,7 @@ class MultivariateDiagonalGaussian(ParameterDistribution):
 
     def sample(self) -> torch.Tensor:
         sigma = F.softplus(self.rho)
-        return torch.randn(*self.mu.shape) * sigma + self.mu
+        return torch.randn(*self.mu.shape, device=sigma.device) * sigma + self.mu
 
 
 def evaluate(model: Model, eval_loader: torch.utils.data.DataLoader, data_dir: str, output_dir: str):
