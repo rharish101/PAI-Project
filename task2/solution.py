@@ -230,13 +230,23 @@ class BayesianLayer(nn.Module):
             ii) sample of the log-prior probability, and
             iii) sample of the log-variational-posterior probability
         """
-        # TODO: Perform a forward pass as described in this method's docstring.
+        # Perform a forward pass as described in this method's docstring.
         #  Make sure to check whether `self.use_bias` is True,
         #  and if yes, include the bias as well.
-        log_prior = torch.tensor(0.0)
-        log_variational_posterior = torch.tensor(0.0)
-        weights = None
-        bias = None
+        weights = self.weights_var_posterior.sample()
+        if self.use_bias:
+            bias = typing.cast(
+                ParameterDistribution, self.bias_var_posterior
+            ).sample()
+        else:
+            bias = torch.tensor(0.0, device=weights.device)
+
+        log_prior = self.prior.log_likelihood(weights)
+        if self.use_bias:
+            log_prior += self.prior.log_likelihood(bias)
+        log_variational_posterior = self.weights_var_posterior.log_likelihood(weights)
+        if self.use_bias:
+            log_variational_posterior += self.bias_var_posterior.log_likelihood(bias)
 
         return F.linear(inputs, weights, bias), log_prior, log_variational_posterior
 
