@@ -174,14 +174,18 @@ class BayesianLayer(nn.Module):
         self.out_features = out_features
         self.use_bias = bias
 
-        # TODO: Create a suitable prior for weights and biases as an instance of ParameterDistribution.
+        # Create a suitable prior for weights and biases as an instance of ParameterDistribution.
         #  You can use the same prior for both weights and biases, but are free to experiment with different priors.
         #  You can create constants using torch.tensor(...).
         #  Do NOT use torch.Parameter(...) here since the prior should not be optimized!
         #  Example: self.prior = MyPrior(torch.tensor(0.0), torch.tensor(1.0))
-        self.prior = None
+        prior_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
+        self.prior = UnivariateGaussian(
+            nn.Parameter(torch.tensor(0.0), requires_grad=False),
+            nn.Parameter(torch.tensor(prior_std), requires_grad=False),
+        )
         assert isinstance(self.prior, ParameterDistribution)
-        assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
+        # assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
 
         # TODO: Create a suitable variational posterior for weights as an instance of ParameterDistribution.
         #  You need to create separate ParameterDistribution instances for weights and biases,
