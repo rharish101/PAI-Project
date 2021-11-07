@@ -288,12 +288,19 @@ class BayesNet(nn.Module):
             iii) sample of the log-variational-posterior probability
         """
 
-        # TODO: Perform a full pass through your BayesNet as described in this method's docstring.
+        # Perform a full pass through your BayesNet as described in this method's docstring.
         #  You can look at DenseNet to get an idea how a forward pass might look like.
         #  Don't forget to apply your activation function in between BayesianLayers!
-        log_prior = torch.tensor(0.0)
-        log_variational_posterior = torch.tensor(0.0)
-        output_features = None
+        log_prior = 0.0
+        log_variational_posterior = 0.0
+        output_features = x
+
+        for idx, current_layer in enumerate(self.layers):
+            output_features, curr_log_prior, curr_log_variational_posterior = current_layer(output_features)
+            log_prior += curr_log_prior
+            log_variational_posterior += curr_log_variational_posterior
+            if idx < len(self.layers) - 1:
+                output_features = self.activation(output_features)
 
         return output_features, log_prior, log_variational_posterior
 
