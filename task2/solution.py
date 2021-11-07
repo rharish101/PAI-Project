@@ -75,6 +75,9 @@ class Model(object):
             print('Using a BayesNet model')
             self.network = BayesNet(in_features=28 * 28, hidden_features=hidden_layers, out_features=10)
 
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.network = self.network.to(self.device)
+
         # Optimizer for training
         # Feel free to try out different optimizers
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
@@ -99,6 +102,8 @@ class Model(object):
             num_batches = len(train_loader)
             for batch_idx, (batch_x, batch_y) in enumerate(train_loader):
                 # batch_x are of shape (batch_size, 784), batch_y are of shape (batch_size,)
+                batch_x = batch_x.to(self.device)
+                batch_y = batch_y.to(self.device)
 
                 self.network.zero_grad()
 
@@ -154,7 +159,9 @@ class Model(object):
 
         probability_batches = []
         for batch_x, batch_y in data_loader:
-            current_probabilities = self.network.predict_probabilities(batch_x).detach().numpy()
+            batch_x = batch_x.to(self.device)
+            batch_y = batch_y.to(self.device)
+            current_probabilities = self.network.predict_probabilities(batch_x).detach().cpu().numpy()
             probability_batches.append(current_probabilities)
 
         output = np.concatenate(probability_batches, axis=0)
