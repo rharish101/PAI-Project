@@ -14,3 +14,10 @@ __pycache__/
 
 # For task 1
 task1/extended_evaluation.pdf
+
+# For task 2
+task2/ambiguous_rotated_mnist.pdf
+task2/fashionmnist_least_confident.pdf
+task2/fashionmnist_most_confident.pdf
+task2/mnist_least_confident.pdf
+task2/mnist_most_confident.pdf
