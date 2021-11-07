@@ -335,7 +335,7 @@ class MultivariateDiagonalGaussian(ParameterDistribution):
     def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
         var = F.softplus(self.rho.flatten()) ** 2
         ll = -(len(var) / 2) * np.log(2 * np.pi)
-        ll -= 0.5 * var.prod().log()
+        ll -= 0.5 * var.log().sum()
         diff = (values - self.mu).flatten()
         ll -= 0.5 * diff.T @ ((1 / var) * diff)
         return ll
