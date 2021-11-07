@@ -310,7 +310,7 @@ class UnivariateGaussian(ParameterDistribution):
     def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
         ll = -0.5 * np.log(2 * np.pi)
         ll -= torch.log(self.sigma)
-        ll -= 0.5 * ((values - self.mu) / self.sigma) ** 2
+        ll -= 0.5 * (((values - self.mu) / self.sigma) ** 2).sum()
         return ll
 
     def sample(self) -> torch.Tensor:
