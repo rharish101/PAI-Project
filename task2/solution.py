@@ -27,6 +27,8 @@ def run_solution(dataset_train: torch.utils.data.Dataset, data_dir: str = os.cur
     :param data_dir: Directory containing the datasets
     :return: Your trained model
     """
+    np.random.seed(0)
+    torch.random.manual_seed(0)
 
     # Create model
     model = Model()
