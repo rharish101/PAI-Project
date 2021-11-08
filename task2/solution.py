@@ -195,10 +195,10 @@ class BayesianLayer(nn.Module):
         #  You can create constants using torch.tensor(...).
         #  Do NOT use torch.Parameter(...) here since the prior should not be optimized!
         #  Example: self.prior = MyPrior(torch.tensor(0.0), torch.tensor(1.0))
-        prior_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
+        xavier_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
         self.prior = UnivariateGaussian(
             nn.Parameter(torch.tensor(0.0), requires_grad=False),
-            nn.Parameter(torch.tensor(prior_std), requires_grad=False),
+            nn.Parameter(torch.tensor(xavier_std), requires_grad=False),
         )
         assert isinstance(self.prior, ParameterDistribution)
         # assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
@@ -215,7 +215,7 @@ class BayesianLayer(nn.Module):
         #  )
         self.weights_var_posterior = MultivariateDiagonalGaussian(
             nn.Parameter(torch.zeros((out_features, in_features))),
-            nn.Parameter(prior_std * torch.ones((out_features, in_features))),
+            nn.Parameter(xavier_std * torch.ones((out_features, in_features))),
         )
 
         assert isinstance(self.weights_var_posterior, ParameterDistribution)
@@ -226,7 +226,7 @@ class BayesianLayer(nn.Module):
             #  Make sure to follow the same rules as for the weight variational posterior.
             self.bias_var_posterior: typing.Optional[ParameterDistribution] = MultivariateDiagonalGaussian(
                 nn.Parameter(torch.zeros(out_features)),
-                nn.Parameter(prior_std * torch.ones(out_features)),
+                nn.Parameter(xavier_std * torch.ones(out_features)),
             )
             assert isinstance(self.bias_var_posterior, ParameterDistribution)
             assert any(True for _ in self.bias_var_posterior.parameters()), 'Bias posterior must have parameters'
