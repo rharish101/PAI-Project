@@ -196,6 +196,9 @@ class BayesianLayer(nn.Module):
         #  Do NOT use torch.Parameter(...) here since the prior should not be optimized!
         #  Example: self.prior = MyPrior(torch.tensor(0.0), torch.tensor(1.0))
         xavier_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
+        # NOTE: We're DELIBERATELY using torch.Parameter(...) here since it's a lot easier to move the tensors to the
+        # GPU by simply using `model.to(device)` instead of manually moving tensors. By simply setting
+        # `requires_grad=False`, we tell PyTorch not to optimize these.
         self.prior = UnivariateGaussian(
             nn.Parameter(torch.tensor(0.0), requires_grad=False),
             nn.Parameter(torch.tensor(xavier_std), requires_grad=False),
