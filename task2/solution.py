@@ -126,7 +126,7 @@ class Model(object):
 
                     # Implement Bayes by backprop training here
                     current_logits, log_prior, log_variational_posterior = self.network(batch_x)
-                    minibatch_likelihood = 2 ** (len(train_loader) - batch_idx - 1) / (2 ** len(train_loader) - 1)
+                    minibatch_likelihood = 2 ** (num_batches - batch_idx - 1) / (2 ** num_batches - 1)
                     loss = F.nll_loss(F.log_softmax(current_logits, dim=1), batch_y, reduction='sum')
                     loss += minibatch_likelihood * (log_variational_posterior - log_prior)
 
