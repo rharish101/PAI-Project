@@ -387,7 +387,7 @@ class ScaleMixtureUnivariateGaussian(ParameterDistribution):
     def __init__(self, sigma_1: torch.Tensor, sigma_2: torch.Tensor, pie: torch.tensor):
         super(ScaleMixtureUnivariateGaussian, self).__init__()  # always make sure to include the super-class init call!
         assert sigma_1.size() == () and sigma_2.size() == ()
-        assert sigma_1 > 0 and sigma_2 > sigma_1
+        assert sigma_2 > 0 and sigma_1 > sigma_2
         assert pie >= 0 and pie <= 1
 
         self.mu = 0.0
