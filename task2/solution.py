@@ -262,7 +262,9 @@ class BayesianLayer(nn.Module):
             log_prior += self.prior.log_likelihood(bias)
         log_variational_posterior = self.weights_var_posterior.log_likelihood(weights)
         if self.use_bias:
-            log_variational_posterior += self.bias_var_posterior.log_likelihood(bias)
+            log_variational_posterior += typing.cast(
+                ParameterDistribution, self.bias_var_posterior
+            ).log_likelihood(bias)
 
         return F.linear(inputs, weights, bias), log_prior, log_variational_posterior
 
