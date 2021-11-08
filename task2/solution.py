@@ -3,6 +3,7 @@ import typing
 
 import numpy as np
 import torch
+from torch import tensor
 import torch.optim
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_auc_score, average_precision_score
@@ -202,13 +203,17 @@ class BayesianLayer(nn.Module):
         #  You can create constants using torch.tensor(...).
         #  Do NOT use torch.Parameter(...) here since the prior should not be optimized!
         #  Example: self.prior = MyPrior(torch.tensor(0.0), torch.tensor(1.0))
-        xavier_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
         # NOTE: We're DELIBERATELY using torch.Parameter(...) here since it's a lot easier to move the tensors to the
         # GPU by simply using `model.to(device)` instead of manually moving tensors. By simply setting
         # `requires_grad=False`, we tell PyTorch not to optimize these.
-        self.prior = UnivariateGaussian(
-            nn.Parameter(torch.tensor(0.0), requires_grad=False),
-            nn.Parameter(torch.tensor(xavier_std), requires_grad=False),
+        sigma_1 = 2.0
+        sigma_2 = 0.01
+        pie = 0.5
+        #  Scale mixture prior
+        self.prior = ScaleMixtureUnivariateGaussian(
+            nn.Parameter(torch.tensor(sigma_1), requires_grad=False),
+            nn.Parameter(torch.tensor(sigma_2), requires_grad=False),
+            nn.Parameter(torch.tensor(pie), requires_grad=False),
         )
         assert isinstance(self.prior, ParameterDistribution)
         # assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
@@ -223,6 +228,7 @@ class BayesianLayer(nn.Module):
         #      torch.nn.Parameter(torch.zeros((out_features, in_features))),
         #      torch.nn.Parameter(torch.ones((out_features, in_features)))
         #  )
+        xavier_std = np.sqrt(2 / (in_features + out_features))  # Xavier Normal
         self.weights_var_posterior = MultivariateDiagonalGaussian(
             nn.Parameter(torch.zeros((out_features, in_features))),
             nn.Parameter(xavier_std * torch.ones((out_features, in_features))),
@@ -370,6 +376,35 @@ class UnivariateGaussian(ParameterDistribution):
 
     def sample(self) -> torch.Tensor:
         return torch.randn((), device=self.mu.device) * self.sigma + self.mu
+
+
+class ScaleMixtureUnivariateGaussian(ParameterDistribution):
+    """
+    Scale Mixture Univariate Gaussian distribution.
+    The distribution used as the scaled mixture prior in Blundell et al.
+    """
+
+    def __init__(self, sigma_1: torch.Tensor, sigma_2: torch.Tensor, pie: torch.tensor):
+        super(ScaleMixtureUnivariateGaussian, self).__init__()  # always make sure to include the super-class init call!
+        assert sigma_1.size() == () and sigma_2.size() == ()
+        assert sigma_1 > 0 and sigma_2 > sigma_1
+        assert pie >= 0 and pie <= 1
+
+        self.mu = 0.0
+        self.sigma_1 = sigma_1
+        self.sigma_2 = sigma_2
+        self.pie = pie
+
+        self.gaus_1 = UnivariateGaussian(torch.tensor(0.0), self.sigma_1)
+        self.gaus_2 = UnivariateGaussian(torch.tensor(0.0), self.sigma_2)
+    
+    def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
+        return self.pie * self.gaus_1.log_likelihood(values) + \
+            (1 - self.pie) * self.gaus_2.log_likelihood(values)
+
+    def sample(self) -> torch.Tensor:
+        return self.pie * self.gaus_1.sample() + \
+            (1 - self.pie) * self.gaus_2.sample()
 
 
 class MultivariateDiagonalGaussian(ParameterDistribution):
