@@ -199,10 +199,19 @@ class BayesianLayer(nn.Module):
         # NOTE: We're DELIBERATELY using torch.Parameter(...) here since it's a lot easier to move the tensors to the
         # GPU by simply using `model.to(device)` instead of manually moving tensors. By simply setting
         # `requires_grad=False`, we tell PyTorch not to optimize these.
-        self.prior = UnivariateGaussian(
-            nn.Parameter(torch.tensor(0.0), requires_grad=False),
-            nn.Parameter(torch.tensor(xavier_std), requires_grad=False),
+        # Scale mixture prior
+        sigma_1 = 1e-1
+        sigma_2 = 1e-6
+        pie = 0.25
+        self.prior = ScaleMixtureUnivariateGaussian(
+            torch.tensor(sigma_1),
+            torch.tensor(sigma_2),
+            torch.tensor(pie)
         )
+        # self.prior = UnivariateGaussian(
+        #     nn.Parameter(torch.tensor(0.0), requires_grad=False),
+        #     nn.Parameter(torch.tensor(xavier_std), requires_grad=False),
+        # )
         assert isinstance(self.prior, ParameterDistribution)
         # assert not any(True for _ in self.prior.parameters()), 'Prior cannot have parameters'
 
@@ -364,6 +373,34 @@ class UnivariateGaussian(ParameterDistribution):
     def sample(self) -> torch.Tensor:
         return torch.randn((), device=self.mu.device) * self.sigma + self.mu
 
+
+class ScaleMixtureUnivariateGaussian(ParameterDistribution):
+    """
+    Scale Mixture Univariate Gaussian distribution.
+    The distribution used as the scaled mixture prior in Blundell et al.
+    """
+
+    def __init__(self, sigma_1: torch.Tensor, sigma_2: torch.Tensor, pie: torch.tensor):
+        super(ScaleMixtureUnivariateGaussian, self).__init__()  # always make sure to include the super-class init call!
+        assert sigma_1.size() == () and sigma_2.size() == ()
+        assert sigma_2 > 0 and sigma_1 > sigma_2
+        assert pie >= 0 and pie <= 1
+
+        self.mu = 0.0
+        self.sigma_1 = sigma_1
+        self.sigma_2 = sigma_2
+        self.pie = pie
+
+        self.gaus_1 = UnivariateGaussian(torch.tensor(0.0), self.sigma_1)
+        self.gaus_2 = UnivariateGaussian(torch.tensor(0.0), self.sigma_2)
+    
+    def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
+        return self.pie * self.gaus_1.log_likelihood(values) + \
+            (1 - self.pie) * self.gaus_2.log_likelihood(values)
+
+    def sample(self) -> torch.Tensor:
+        return self.pie * self.gaus_1.sample() + \
+            (1 - self.pie) * self.gaus_2.sample()
 
 class MultivariateDiagonalGaussian(ParameterDistribution):
     """
