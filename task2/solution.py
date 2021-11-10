@@ -58,9 +58,9 @@ class Model(object):
     def __init__(self):
         # Hyperparameters and general parameters
         # You might want to play around with those
-        self.num_epochs = 200  # number of training epochs
+        self.num_epochs = 100  # number of training epochs
         self.batch_size = 128  # training batch size
-        learning_rate = 1e-3  # training learning rates
+        self.learning_rate = 1e-2  # training learning rates
         hidden_layers = (100, 100)  # for each entry, creates a hidden layer with the corresponding number of units
         use_densenet = False  # set this to True in order to run a DenseNet for comparison
         self.print_interval = 100  # number of batches until updated metrics are displayed during training
@@ -80,7 +80,7 @@ class Model(object):
 
         # Optimizer for training
         # Feel free to try out different optimizers
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.learning_rate)
 
     def train(self, dataset: torch.utils.data.Dataset):
         """
@@ -93,6 +93,12 @@ class Model(object):
 
         train_loader = torch.utils.data.DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, drop_last=True
+        )
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            self.optimizer,
+            self.learning_rate,
+            epochs=self.num_epochs,
+            steps_per_epoch=len(train_loader),
         )
 
         self.network.train()
@@ -134,6 +140,7 @@ class Model(object):
                     loss.backward()
 
                 self.optimizer.step()
+                scheduler.step()
 
                 # Update progress bar with accuracy occasionally
                 if batch_idx % self.print_interval == 0:
