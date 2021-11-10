@@ -368,10 +368,12 @@ class UnivariateGaussian(ParameterDistribution):
         self.mu = mu
         self.sigma = sigma
 
-    def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
-        ll = -0.5 * np.log(2 * np.pi)
+    def log_likelihood(self, values: torch.Tensor, reduce: bool = True) -> torch.Tensor:
+        ll = -0.5 * (((values - self.mu) / self.sigma) ** 2)
+        if reduce:
+            ll = ll.sum()
+        ll -= 0.5 * np.log(2 * np.pi)
         ll -= torch.log(self.sigma)
-        ll -= 0.5 * (((values - self.mu) / self.sigma) ** 2).sum()
         return ll
 
     def sample(self) -> torch.Tensor:
@@ -390,21 +392,22 @@ class ScaleMixtureUnivariateGaussian(ParameterDistribution):
         assert sigma_2 > 0 and sigma_1 > sigma_2
         assert pie >= 0 and pie <= 1
 
-        self.mu = 0.0
-        self.sigma_1 = sigma_1
-        self.sigma_2 = sigma_2
         self.pie = pie
+        mu = nn.Parameter(torch.tensor(0.0), requires_grad=False)
+        self.gaus_1 = UnivariateGaussian(mu, sigma_1)
+        self.gaus_2 = UnivariateGaussian(mu, sigma_2)
 
-        self.gaus_1 = UnivariateGaussian(torch.tensor(0.0), self.sigma_1)
-        self.gaus_2 = UnivariateGaussian(torch.tensor(0.0), self.sigma_2)
-    
     def log_likelihood(self, values: torch.Tensor) -> torch.Tensor:
-        return self.pie * self.gaus_1.log_likelihood(values) + \
-            (1 - self.pie) * self.gaus_2.log_likelihood(values)
+        ll_1 = self.gaus_1.log_likelihood(values, reduce=False)
+        ll_2 = self.gaus_2.log_likelihood(values, reduce=False)
+        return torch.log(self.pie * ll_1.exp() + (1 - self.pie) * ll_2.exp()).sum()
 
     def sample(self) -> torch.Tensor:
-        return self.pie * self.gaus_1.sample() + \
-            (1 - self.pie) * self.gaus_2.sample()
+        rand = torch.rand([])
+        if rand < self.pie:
+            return self.gaus_1.sample()
+        else:
+            return self.gaus_2.sample()
 
 
 class MultivariateDiagonalGaussian(ParameterDistribution):
