@@ -26,14 +26,10 @@ class BO_algo(object):
         # IMPORTANT: DO NOT REMOVE THOSE ATTRIBUTES AND USE sklearn.gaussian_process.GaussianProcessRegressor instances!
         # Otherwise, the extended evaluation will break.
         self.constraint_kernel = ConstantKernel(constant_value=3.5) * RBF(length_scale=2,length_scale_bounds=(1e-07, 1e07))
-        #self.constraint_model = GaussianProcessRegressor(
-        #    kernel= self.constraint_kernel, alpha=0.005)
         
         # Note that when specifying a white-kernel, we are injecting the noise
         # also at inference time. This is not true when using alpha
         self.objective_kernel = ConstantKernel(constant_value=1.5) * RBF(length_scale=1.5,length_scale_bounds=(1e-07, 1e07))
-        #self.objective_model = GaussianProcessRegressor(
-        #    kernel= self.objective_kernel, alpha= 0.01)
 
         self.function_type = 'ei'
         self.solution = 'pick'
@@ -43,7 +39,6 @@ class BO_algo(object):
         # of the objective function i.e. 't' in  acquisition_function
         self.theta_sample = np.array([[x,y] for x in np.linspace(0,6,7) for y in np.linspace(0,6,7)])
 
-        # TODO: how to deal if our minimum point does not satisfy the constraint
 
     def next_recommendation(self) -> np.ndarray:
         """
@@ -55,11 +50,10 @@ class BO_algo(object):
             1 x domain.shape[0] array containing the next point to evaluate
         """
 
-        # TODO: enter your code here
         # In implementing this function, you may use optimize_acquisition_function() defined below.
         if len(self.previous_points)==0:
             return np.array([[float(3),float(3)]])
-            # here we could also initialize differently, I simple chose the 
+            # here we could also initialize differently, I simply chose the 
             # middle of the grid
         else:
             return self.optimize_acquisition_function()
@@ -109,7 +103,6 @@ class BO_algo(object):
             value of the acquisition function at x
         """
 
-        # TODO: enter your code here
         if self.function_type=='ei':
             # de-mean data?
             
@@ -117,7 +110,6 @@ class BO_algo(object):
             # a) t is minimum over previous observations
             # b) t is minimum of expected value of the objective
             if self.t_choice == 'observations':
-                # this approach does not work well
                 t = np.array(self.previous_points)[:,2].min()
             elif self.t_choice == 'expectation':
                 t = self.objective_model.predict(self.theta_sample).min()
@@ -135,10 +127,10 @@ class BO_algo(object):
             return prob_constraint * ei_x
         
         elif self.function_type=='ucb':
-            raise 'Acquisition function not implemented'
+            raise NotImplementedError('Acquisition function not implemented')
 
         else:
-            raise 'Acquisition function not implemented'
+            raise NotImplementedError('Acquisition function not implemented')
 
     def add_data_point(self, x: np.ndarray, z: float, c: float):
         """
@@ -156,23 +148,8 @@ class BO_algo(object):
 
         assert x.shape == (1, 2)
         self.previous_points.append([float(x[:, 0]), float(x[:, 1]), float(z), float(c)])
-        # TODO: enter your code here
         
         data = np.asarray(self.previous_points)
-
-        # self.constraint_kernel.set_params(
-        #     **(self.constraint_model.kernel_.get_params()))
-        # self.objetive_kernel.set_params(
-        #     **(self.objective_model.kernel_.get_params()))
-
-        # self.constraint_model = GaussianProcessRegressor(
-        #     kernel= self.constraint_kernel, alpha=0.005)
-        # self.objective_model = GaussianProcessRegressor(
-        #     kernel= self.objective_kernel, alpha= 0.01)
-        
-        #self.constraint_model.set_params(**(self.constraint_model.get_params()))
-        #self.objective_model.set_params(**(self.objective_model.get_params()))
-        # are we using the parameters this way?
         
         self.constraint_model = GaussianProcessRegressor(
             kernel= self.constraint_kernel, alpha=0.005, random_state=0)
@@ -194,7 +171,6 @@ class BO_algo(object):
             1 x domain.shape[0] array containing the optimal solution of the problem
         """
 
-        # TODO: enter your code here
         if self.solution == 'pick':
             data = np.array(self.previous_points)
             data = data[data[:,-1]<=0]
@@ -203,10 +179,10 @@ class BO_algo(object):
             return data[data[:,2].argmin(),:2]
         
         elif self.solution == 'optimize':
-            raise 'Optimization of the fitted objective function not implemented'
+            raise NotImplementedError('Optimization of the fitted objective function not implemented')
         
         else:
-            raise f'get_solution=={self.solution} not implemeted!'
+            raise NotImplementedError(f'get_solution=={self.solution} not implemeted!')
 
 """ 
     Toy problem to check  you code works as expected
