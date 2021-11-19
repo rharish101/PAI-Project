@@ -4,7 +4,10 @@ import typing
 import logging
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
+from scipy.stats import norm
 import matplotlib.pyplot as plt
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import ConstantKernel, RBF
 
 EXTENDED_EVALUATION = False
 # Set `EXTENDED_EVALUATION` to `True` in order to visualize your predictions.
@@ -12,6 +15,7 @@ EXTENDED_EVALUATION = False
 
 """ Solution """
 
+np.random.seed(0)
 
 class BO_algo(object):
     def __init__(self):
@@ -21,8 +25,20 @@ class BO_algo(object):
         self.previous_points = []
         # IMPORTANT: DO NOT REMOVE THOSE ATTRIBUTES AND USE sklearn.gaussian_process.GaussianProcessRegressor instances!
         # Otherwise, the extended evaluation will break.
-        self.constraint_model = None  # TODO : GP model for the constraint function
-        self.objective_model = None  # TODO : GP model for your acquisition function
+        self.constraint_kernel = ConstantKernel(constant_value=3.5) * RBF(length_scale=2,length_scale_bounds=(1e-07, 1e07))
+        
+        # Note that when specifying a white-kernel, we are injecting the noise
+        # also at inference time. This is not true when using alpha
+        self.objective_kernel = ConstantKernel(constant_value=1.5) * RBF(length_scale=1.5,length_scale_bounds=(1e-07, 1e07))
+
+        self.function_type = 'ei'
+        self.solution = 'pick'
+        self.t_choice = 'observations'
+        self.xi = 0.01 # exploration-exploitation trade-off parameter
+        # Samples in domain used when approximating the minimum expected value
+        # of the objective function i.e. 't' in  acquisition_function
+        self.theta_sample = np.array([[x,y] for x in np.linspace(0,6,7) for y in np.linspace(0,6,7)])
+
 
     def next_recommendation(self) -> np.ndarray:
         """
@@ -34,8 +50,13 @@ class BO_algo(object):
             1 x domain.shape[0] array containing the next point to evaluate
         """
 
-        # TODO: enter your code here
         # In implementing this function, you may use optimize_acquisition_function() defined below.
+        if len(self.previous_points)==0:
+            return np.array([[float(3),float(3)]])
+            # here we could also initialize differently, I simply chose the 
+            # middle of the grid
+        else:
+            return self.optimize_acquisition_function()
 
     def optimize_acquisition_function(self) -> np.ndarray:  # DON'T MODIFY THIS FUNCTION
         """
@@ -82,8 +103,34 @@ class BO_algo(object):
             value of the acquisition function at x
         """
 
-        # TODO: enter your code here
-        raise NotImplementedError
+        if self.function_type=='ei':
+            # de-mean data?
+            
+            #two strategies for picking t possible
+            # a) t is minimum over previous observations
+            # b) t is minimum of expected value of the objective
+            if self.t_choice == 'observations':
+                t = np.array(self.previous_points)[:,2].min()
+            elif self.t_choice == 'expectation':
+                t = self.objective_model.predict(self.theta_sample).min()
+            
+            # constraint
+            c_mean, c_std = self.constraint_model.predict(np.atleast_2d(x), return_std=True)
+            prob_constraint = norm.cdf(0, loc=c_mean, scale=c_std)
+            
+            # objective
+            y_mean, y_std = self.objective_model.predict(np.atleast_2d(x), return_std=True)
+            z_x = (t - y_mean - self.xi)/y_std
+
+            ei_x =  y_std *(z_x * norm.cdf(z_x) + norm.pdf(z_x))
+            
+            return prob_constraint * ei_x
+        
+        elif self.function_type=='ucb':
+            raise NotImplementedError('Acquisition function not implemented')
+
+        else:
+            raise NotImplementedError('Acquisition function not implemented')
 
     def add_data_point(self, x: np.ndarray, z: float, c: float):
         """
@@ -94,15 +141,25 @@ class BO_algo(object):
         x: np.ndarray
             point in the domain of f
         z: np.ndarray
-            value of the acquisition function at x
+            value of the objective function at x
         c: np.ndarray
-            value of the condition function at x
+            value of the constraint function at x
         """
 
         assert x.shape == (1, 2)
         self.previous_points.append([float(x[:, 0]), float(x[:, 1]), float(z), float(c)])
-        # TODO: enter your code here
-        raise NotImplementedError
+        
+        data = np.asarray(self.previous_points)
+        
+        self.constraint_model = GaussianProcessRegressor(
+            kernel= self.constraint_kernel, alpha=0.005, random_state=0)
+        self.objective_model = GaussianProcessRegressor(
+            kernel= self.objective_kernel, alpha= 0.01, random_state=0)
+
+        self.constraint_model.fit(data[:,:2], data[:,3])
+        self.objective_model.fit(data[:,:2], data[:,2])
+        
+        
 
     def get_solution(self) -> np.ndarray:
         """
@@ -114,9 +171,18 @@ class BO_algo(object):
             1 x domain.shape[0] array containing the optimal solution of the problem
         """
 
-        # TODO: enter your code here
-        raise NotImplementedError
-
+        if self.solution == 'pick':
+            data = np.array(self.previous_points)
+            data = data[data[:,-1]<=0]
+            # recall that despite a variable constraint lambda, our constraint
+            # is in practice c <= 0, the rest is taken care of in the background
+            return data[data[:,2].argmin(),:2]
+        
+        elif self.solution == 'optimize':
+            raise NotImplementedError('Optimization of the fitted objective function not implemented')
+        
+        else:
+            raise NotImplementedError(f'get_solution=={self.solution} not implemeted!')
 
 """ 
     Toy problem to check  you code works as expected
