@@ -21,3 +21,7 @@ task2/fashionmnist_least_confident.pdf
 task2/fashionmnist_most_confident.pdf
 task2/mnist_least_confident.pdf
 task2/mnist_most_confident.pdf
+
+# For task 4
+policy.meta.json
+policy.mp4
