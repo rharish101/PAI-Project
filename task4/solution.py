@@ -211,7 +211,7 @@ class Agent:
         """
         Use the data from the buffer to update the policy. Returns nothing.
         """
-        #TODO2: Implement this function. 
+        #Implement this function. 
         #TODO8: Change the update rule to make use of the baseline instead of rewards-to-go.
 
         obs = data['obs']
@@ -224,6 +224,9 @@ class Agent:
 
         #Hint: you need to compute a 'loss' such that its derivative with respect to the policy
         #parameters is the policy gradient. Then call loss.backwards() and pi_optimizer.step()
+        loss = -ret @ self.ac.pi(obs, act)[1]
+        loss.backward()
+        self.pi_optimizer.step()
 
         return
 
@@ -338,7 +341,9 @@ class Agent:
         """
         # Implement this function.
         # Currently, this just returns a random action.
-        return self.ac.step(torch.from_numpy(obs).float())[0].cpu().numpy()
+        obs_tensor = torch.from_numpy(obs)
+        dtype = next(iter(self.ac.parameters())).dtype
+        return self.ac.step(obs_tensor.to(dtype))[0].cpu().numpy()
 
 
 def main():
