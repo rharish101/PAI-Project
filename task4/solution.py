@@ -234,7 +234,7 @@ class Agent:
         """
         Use the data from the buffer to update the value function. Returns nothing.
         """
-        #TODO5: Implement this function
+        # Implement this function
 
         obs = data['obs']
         act = data['act']
@@ -246,7 +246,11 @@ class Agent:
         # In each update, compute a loss for the value function, call loss.backwards() and 
         # then v_optimizer.step()
         # Before doing any computation, always call.zero_grad on the relevant optimizer
-        self.v_optimizer.zero_grad()
+        for _ in range(100):
+            self.v_optimizer.zero_grad()
+            loss = torch.sum((self.ac.v(obs) - ret) ** 2)
+            loss.backward()
+            self.v_optimizer.step()
 
         return
 
