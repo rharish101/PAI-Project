@@ -98,14 +98,19 @@ class MLPActorCritic(nn.Module):
         Take a state and return an action, value function, and log-likelihood
         of chosen action.
         """
-        # TODO1: Implement this function.
+        # Implement this function.
         # It is supposed to return three numbers:
         #    1. An action sampled from the policy given a state (0, 1, 2 or 3)
         #    2. The value function at the given state
         #    3. The log-probability of the action under the policy output distribution
         # Hint: This function is only called when interacting with the environment. You should use
         # `torch.no_grad` to ensure that it does not interfere with the gradient computation.
-        return 0, 0, 0
+        with torch.no_grad():
+            action_dist = self.pi._distribution(state)
+            action = action_dist.sample()
+            action_log_prob = self.pi._log_prob_from_distribution(action_dist, action)
+            value_fn = self.v(state)
+            return action, value_fn, action_log_prob
 
 
 class VPGBuffer:
