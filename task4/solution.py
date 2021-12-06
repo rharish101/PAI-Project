@@ -335,9 +335,9 @@ class Agent:
         It is not used in your own training code. Instead the .step function in 
         MLPActorCritic is used since it also outputs relevant side-information. 
         """
-        # TODO3: Implement this function.
+        # Implement this function.
         # Currently, this just returns a random action.
-        return np.random.choice([0, 1, 2, 3])
+        return self.ac.step(torch.from_numpy(obs).float())[0].cpu().numpy()
 
 
 def main():
