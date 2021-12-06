@@ -157,14 +157,14 @@ class VPGBuffer:
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
 
-        # TODO6: Implement computation of phi.
+        # Implement computation of phi.
         
         # Hint: For estimating the advantage function to use as phi, equation 
         # 16 in the GAE paper (see task description) will be helpful, and so will
         # the discout_cumsum function at the top of this file. 
         
-        # deltas = rews[:-1] + ...
-        # self.phi_buf[path_slice] =
+        deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
+        self.phi_buf[path_slice] = discount_cumsum(deltas, self.gamma * self.lam)
 
         # currently the return is the total discounted reward for the whole episode. 
         # Replace this by computing the reward-to-go for each timepoint.
