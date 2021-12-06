@@ -182,8 +182,9 @@ class VPGBuffer:
         assert self.ptr == self.max_size
         self.ptr, self.path_start_idx = 0, 0
 
-        # TODO7: Here it may help to normalize the values in self.phi_buf
-        self.phi_buf = self.phi_buf
+        # Here it may help to normalize the values in self.phi_buf
+        self.phi_buf -= self.phi_buf.mean()
+        self.phi_buf /= self.phi_buf.std() + np.finfo(self.phi_buf.dtype).eps
 
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     phi=self.phi_buf, logp=self.logp_buf)
