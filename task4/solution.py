@@ -193,6 +193,9 @@ class VPGBuffer:
 
 class Agent:
     def __init__(self, env):
+        np.random.seed(0)
+        torch.manual_seed(0)
+
         self.env = env
         self.hid = 64  # layer width of networks
         self.l = 2  # layer number of networks
