@@ -98,14 +98,19 @@ class MLPActorCritic(nn.Module):
         Take a state and return an action, value function, and log-likelihood
         of chosen action.
         """
-        # TODO1: Implement this function.
+        # Implement this function.
         # It is supposed to return three numbers:
         #    1. An action sampled from the policy given a state (0, 1, 2 or 3)
         #    2. The value function at the given state
         #    3. The log-probability of the action under the policy output distribution
         # Hint: This function is only called when interacting with the environment. You should use
         # `torch.no_grad` to ensure that it does not interfere with the gradient computation.
-        return 0, 0, 0
+        with torch.no_grad():
+            action_dist = self.pi._distribution(state)
+            action = action_dist.sample()
+            action_log_prob = self.pi._log_prob_from_distribution(action_dist, action)
+            value_fn = self.v(state)
+            return action, value_fn, action_log_prob
 
 
 class VPGBuffer:
@@ -152,19 +157,19 @@ class VPGBuffer:
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
 
-        # TODO6: Implement computation of phi.
+        # Implement computation of phi.
         
         # Hint: For estimating the advantage function to use as phi, equation 
         # 16 in the GAE paper (see task description) will be helpful, and so will
         # the discout_cumsum function at the top of this file. 
         
-        # deltas = rews[:-1] + ...
-        # self.phi_buf[path_slice] =
+        deltas = rews[:-1] + self.gamma * vals[1:] - vals[:-1]
+        self.phi_buf[path_slice] = discount_cumsum(deltas, self.gamma * self.lam)
 
-        #TODO4: currently the return is the total discounted reward for the whole episode. 
+        # currently the return is the total discounted reward for the whole episode. 
         # Replace this by computing the reward-to-go for each timepoint.
         # Hint: use the discount_cumsum function.
-        self.ret_buf[path_slice] = discount_cumsum(rews, self.gamma)[0] * np.ones(self.ptr-self.path_start_idx)
+        self.ret_buf[path_slice] = discount_cumsum(rews, self.gamma)[:-1]
 
         self.path_start_idx = self.ptr
 
@@ -177,8 +182,9 @@ class VPGBuffer:
         assert self.ptr == self.max_size
         self.ptr, self.path_start_idx = 0, 0
 
-        # TODO7: Here it may help to normalize the values in self.phi_buf
-        self.phi_buf = self.phi_buf
+        # Here it may help to normalize the values in self.phi_buf
+        self.phi_buf -= self.phi_buf.mean()
+        self.phi_buf /= self.phi_buf.std() + np.finfo(self.phi_buf.dtype).eps
 
         data = dict(obs=self.obs_buf, act=self.act_buf, ret=self.ret_buf,
                     phi=self.phi_buf, logp=self.logp_buf)
@@ -187,6 +193,9 @@ class VPGBuffer:
 
 class Agent:
     def __init__(self, env):
+        np.random.seed(0)
+        torch.manual_seed(0)
+
         self.env = env
         self.hid = 64  # layer width of networks
         self.l = 2  # layer number of networks
@@ -205,8 +214,8 @@ class Agent:
         """
         Use the data from the buffer to update the policy. Returns nothing.
         """
-        #TODO2: Implement this function. 
-        #TODO8: Change the update rule to make use of the baseline instead of rewards-to-go.
+        #Implement this function. 
+        #Change the update rule to make use of the baseline instead of rewards-to-go.
 
         obs = data['obs']
         act = data['act']
@@ -218,6 +227,9 @@ class Agent:
 
         #Hint: you need to compute a 'loss' such that its derivative with respect to the policy
         #parameters is the policy gradient. Then call loss.backwards() and pi_optimizer.step()
+        loss = -phi @ self.ac.pi(obs, act)[1]
+        loss.backward()
+        self.pi_optimizer.step()
 
         return
 
@@ -225,7 +237,7 @@ class Agent:
         """
         Use the data from the buffer to update the value function. Returns nothing.
         """
-        #TODO5: Implement this function
+        # Implement this function
 
         obs = data['obs']
         act = data['act']
@@ -237,7 +249,11 @@ class Agent:
         # In each update, compute a loss for the value function, call loss.backwards() and 
         # then v_optimizer.step()
         # Before doing any computation, always call.zero_grad on the relevant optimizer
-        self.v_optimizer.zero_grad()
+        for _ in range(100):
+            self.v_optimizer.zero_grad()
+            loss = torch.sum((self.ac.v(obs) - ret) ** 2)
+            loss.backward()
+            self.v_optimizer.step()
 
         return
 
@@ -330,9 +346,11 @@ class Agent:
         It is not used in your own training code. Instead the .step function in 
         MLPActorCritic is used since it also outputs relevant side-information. 
         """
-        # TODO3: Implement this function.
+        # Implement this function.
         # Currently, this just returns a random action.
-        return np.random.choice([0, 1, 2, 3])
+        obs_tensor = torch.from_numpy(obs)
+        dtype = next(iter(self.ac.parameters())).dtype
+        return self.ac.step(obs_tensor.to(dtype))[0].cpu().numpy()
 
 
 def main():
