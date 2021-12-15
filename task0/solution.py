@@ -43,8 +43,24 @@ def log_posterior_probs(x):
     """
     assert x.ndim == 1
 
-    # TODO: enter your code here
+    # enter your code here
+    log_h1_numerator = np.sum(-(x ** 2) / 4 - np.log(4 * np.pi) / 2) + np.log(0.35)
+    log_h2_numerator = np.sum(-np.abs(x) - np.log(2)) + np.log(0.25)
+    log_h3_numerator = np.sum(-2.5 * np.log(1 + x ** 2 / 4) + np.log(3 / 8)) + np.log(0.40)
 
+    # For numeric stability
+    k = np.minimum(np.minimum(log_h1_numerator, log_h2_numerator), log_h3_numerator)
+    log_p_denominator = np.log(
+        np.exp(log_h1_numerator - k)
+        + np.exp(log_h2_numerator - k)
+        + np.exp(log_h3_numerator - k)
+    ) + k
+
+    log_p = np.stack([
+        log_h1_numerator - log_p_denominator,
+        log_h2_numerator - log_p_denominator,
+        log_h3_numerator - log_p_denominator,
+    ])
     assert log_p.shape == (3,)
     return log_p
 
